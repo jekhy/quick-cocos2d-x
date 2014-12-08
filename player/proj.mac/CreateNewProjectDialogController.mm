@@ -1,5 +1,6 @@
 
 #import "CreateNewProjectDialogController.h"
+#include "ProjectConfig/SimulatorConfig.h"
 
 @implementation CreateNewProjectDialogController
 
@@ -56,10 +57,50 @@
 
 - (IBAction) onCreate:(id)sender
 {
-//    NSString *projectLocation = [textFieldProjetLocation stringValue];
-//    NSString *packageName = [textFieldPackageName stringValue];
+    // check all filed
+    NSString *projectLocation = [textFieldProjetLocation stringValue];
+    NSString *packageName = [textFieldPackageName stringValue];
 //
-//    NSString *commandLine = [NSString stringWithFormat:@"", packageName];
+    
+    // run script
+    NSString *createProjectShellFilePath = [NSString stringWithFormat:@"%s%@", SimulatorConfig::sharedDefaults()->getQuickCocos2dxRootPath().c_str(),@"bin/create_project.sh"];
+    NSString *commandLine = [NSString stringWithFormat:@"%@ -f -p %@ -o %@", createProjectShellFilePath, packageName, projectLocation];
+    [[[textView textStorage] mutableString] appendString:commandLine];
+    
+    NSTask *task;
+    task = [[NSTask alloc] init];
+    [task setLaunchPath: createProjectShellFilePath];
+    
+    NSArray *arguments;
+    arguments = [NSArray arrayWithObjects: @"-f",
+                                            [NSString stringWithFormat:@"-p %@", packageName],
+                                            [NSString stringWithFormat:@"-o %@", projectLocation], nil];
+    [task setArguments: arguments];
+    
+    NSPipe *pipe;
+    pipe = [NSPipe pipe];
+    [task setStandardOutput: pipe];
+    
+    NSFileHandle *file;
+    file = [pipe fileHandleForReading];
+    
+    [task launch];
+    
+    NSData *data;
+    data = [file readDataToEndOfFile];
+    
+    NSString *string;
+    string = [[NSString alloc] initWithData: data encoding: NSUTF8StringEncoding];
+    
+    [[[textView textStorage] mutableString] appendString:string];
+    
+    [string release];
+    [task release];
+}
+
+- (IBAction) onPackageNameChanged:(id)sender
+{
+
 }
 
 @end

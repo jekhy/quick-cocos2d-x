@@ -90,13 +90,17 @@ bool CCScale9Sprite::initWithBatchNode(CCSpriteBatchNode* batchnode, CCRect rect
 
 bool CCScale9Sprite::initWithBatchNode(CCSpriteBatchNode* batchnode, CCRect rect, bool rotated, CCRect capInsets)
 {
+    setCascadeColorEnabled(true);
+    setCascadeOpacityEnabled(true);
+
     if(batchnode)
     {
         this->updateWithBatchNode(batchnode, rect, rotated, capInsets);
         this->setAnchorPoint(ccp(0.5f, 0.5f));
     }
+    this->updatePositions();
     this->m_positionsAreDirty = true;
-    
+
     return true;
 }
 
@@ -398,6 +402,7 @@ bool CCScale9Sprite::updateWithBatchNode(CCSpriteBatchNode* batchnode, CCRect re
 void CCScale9Sprite::setContentSize(const CCSize &size)
 {
     CCNode::setContentSize(size);
+    this->updatePositions();
     this->m_positionsAreDirty = true;
 }
 
@@ -775,6 +780,16 @@ void CCScale9Sprite::visit()
         this->m_positionsAreDirty = false;
     }
     CCNode::visit();
+}
+
+void CCScale9Sprite::setBlendFunc(ccBlendFunc blendFunc)
+{
+    this->_scale9Image->setBlendFunc(blendFunc);
+}
+
+ccBlendFunc CCScale9Sprite::getBlendFunc(void)
+{
+    return this->_scale9Image->getBlendFunc();
 }
 
 NS_CC_EXT_END

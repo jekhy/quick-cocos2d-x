@@ -385,6 +385,7 @@ void WebSocket::close()
     CCLOG("websocket (%p) connection closed by client", this);
     _readyState = kStateClosed;
 
+    _wsHelper->quitSubThread();
     _wsHelper->joinSubThread();
     
     // onClose callback needs to be invoked at the end of this method
@@ -471,7 +472,7 @@ int WebSocket::onSocketCallback(struct libwebsocket_context *ctx,
                      enum libwebsocket_callback_reasons reason,
                      void *user, void *in, size_t len)
 {
-	//CCLOG("socket callback for %d reason", reason);
+//    CCLOG("socket callback for %d reason", reason);
     CCAssert(_wsContext == NULL || ctx == _wsContext, "Invalid context.");
     CCAssert(_wsInstance == NULL || wsi == NULL || wsi == _wsInstance, "Invaild websocket instance.");
 

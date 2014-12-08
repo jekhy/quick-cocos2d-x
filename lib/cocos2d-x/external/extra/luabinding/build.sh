@@ -7,4 +7,12 @@ $MAKE_LUABINDING -E CCOBJECTS=CCHTTPRequest -d "$OUTPUT_DIR" cocos2dx_extra_luab
 echo ""
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo ""
+$MAKE_LUABINDING -E CCOBJECTS=CCHTTPRequest -d "$OUTPUT_DIR" cocos2dx_httprequest_luabinding.tolua
+echo ""
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo ""
 $MAKE_LUABINDING -d "$OUTPUT_DIR" cocos2dx_extra_ios_iap_luabinding.tolua
+echo ""
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo ""
+$MAKE_LUABINDING -d "$OUTPUT_DIR" CZHelperFunc_luabinding.tolua

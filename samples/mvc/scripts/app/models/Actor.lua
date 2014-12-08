@@ -59,7 +59,7 @@ function Actor:ctor(properties, events, callbacks)
         {name = "relive", from = "dead",    to = "idle"},
     }
     -- 如果继承类提供了其他事件，则合并
-    table.insertTo(defaultEvents, totable(events))
+    table.insertto(defaultEvents, checktable(events))
 
     -- 设定状态机的默认回调
     local defaultCallbacks = {
@@ -74,7 +74,7 @@ function Actor:ctor(properties, events, callbacks)
         onleavefiring = handler(self, self.onLeaveFiring_),
     }
     -- 如果继承类提供了其他回调，则合并
-    table.merge(defaultCallbacks, totable(callbacks))
+    table.merge(defaultCallbacks, checktable(callbacks))
 
     self.fsm__:setupState({
         events = defaultEvents,
@@ -177,25 +177,25 @@ function Actor:fire()
 end
 
 -- 命中目标
-function Actor:hit(target)
+function Actor:hit(enemy)
     assert(not self:isDead(), string.format("actor %s:%s is dead, can't change Hp", self:getId(), self:getNickname()))
 
     -- 简化算法：伤害 = 自己的攻击力 - 目标防御
     local damage = 0
     if math.random(1, 100) <= 80 then -- 命中率 80%
         local armor = 0
-        if not target:isFrozen() then -- 如果目标被冰冻，则无视防御
-            armor = target:getArmor()
+        if not enemy:isFrozen() then -- 如果目标被冰冻，则无视防御
+            armor = enemy:getArmor()
         end
         damage = self:getAttack() - armor
         if damage <= 0 then damage = 1 end -- 只要命中，强制扣 HP
     end
     -- 触发事件，damage <= 0 可以视为 miss
-    self:dispatchEvent({name = Actor.ATTACK_EVENT, target = target, damage = damage})
+    self:dispatchEvent({name = Actor.ATTACK_EVENT, enemy = enemy, damage = damage})
     if damage > 0 then
         -- 扣除目标 HP，并触发事件
-        target:decreaseHp(damage) -- 扣除目标 Hp
-        target:dispatchEvent({name = Actor.UNDER_ATTACK_EVENT, source = self, damage = damage})
+        enemy:decreaseHp(damage) -- 扣除目标 Hp
+        enemy:dispatchEvent({name = Actor.UNDER_ATTACK_EVENT, source = self, damage = damage})
     end
 
     return damage
@@ -249,7 +249,7 @@ function Actor:onRelive_(event)
 end
 
 function Actor:onLeaveFiring_(event)
-    local cooldown = tonum(event.args[1])
+    local cooldown = checknumber(event.args[1])
     if cooldown > 0 then
         -- 如果开火后的冷却时间大于 0，则需要等待
         scheduler.performWithDelayGlobal(function()

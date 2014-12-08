@@ -15,6 +15,8 @@ public:
     void onWelcomeOpen(CCObject *object);
     void onWelcomeSamples(CCObject *object);
     void onWelcomeGetStarted(CCObject *object);
+    void onWelcomeGetCommunity(CCObject *object);
+    void onWelcomeOpenRecent(CCObject *object);
 
 private:
     void *m_controller;

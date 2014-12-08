@@ -12,11 +12,8 @@ echo "  COCOS2DX_ROOT       = $COCOS2DX_ROOT"
 echo "  APP_ROOT            = $APP_ROOT"
 echo "  APP_ANDROID_ROOT    = $APP_ANDROID_ROOT"
 
-# if use quick-cocos2d-x mini, uncomments line below
-# NDK_BUILD_FLAGS="CPPFLAGS=\"-DQUICK_MINI_TARGET=1\" QUICK_MINI_TARGET=1"
-
-# if use DEBUG, set NDK_DEBUG=1, otherwise set NDK_DEBUG=0
-NDK_DEBUG=1
+# if dont use DEBUG, comments out codes below
+NDK_DEBUG=0
 
 echo "- cleanup"
 find "$APP_ANDROID_ROOT" -type d | xargs chmod 755 $1

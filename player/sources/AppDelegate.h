@@ -4,7 +4,7 @@
 
 #include "cocoa/CCObject.h"
 #include "CCApplication.h"
-#include "SimulatorConfig.h"
+#include "ProjectConfig/SimulatorConfig.h"
 
 class StartupCall;
 
@@ -39,9 +39,16 @@ public:
     virtual void applicationWillEnterForeground();
 
     void setProjectConfig(const ProjectConfig& config);
+    void setOpenRecents(const CCLuaValueArray& recents);
 
 private:
+    // track event
+    void trackEvent(const char *eventName);
+    void trackLaunchEvent();
+    
+private:
     ProjectConfig m_projectConfig;
+    CCLuaValueArray m_openRecents;
 
     friend class StartupCall;
 };

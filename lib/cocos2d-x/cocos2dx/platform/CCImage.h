@@ -26,6 +26,7 @@ THE SOFTWARE.
 #define __CC_IMAGE_H__
 
 #include "cocoa/CCObject.h"
+#include "ccTypes.h"
 
 NS_CC_BEGIN
 
@@ -37,6 +38,16 @@ class CCFreeTypeFont;
  * @addtogroup platform
  * @{
  */
+
+typedef enum
+{
+    kFmtJpg = 0,
+    kFmtPng,
+    kFmtTiff,
+    kFmtWebp,
+    kFmtRawData,
+    kFmtUnKnown
+}EImageFormat;
 
 class CC_DLL CCImage : public CCObject
 {
@@ -50,16 +61,6 @@ public:
      * @lua NA
      */
     ~CCImage();
-
-    typedef enum
-    {
-        kFmtJpg = 0,
-        kFmtPng,
-        kFmtTiff,
-        kFmtWebp,
-        kFmtRawData,
-        kFmtUnKnown
-    }EImageFormat;
 
     typedef enum
     {
@@ -159,6 +160,29 @@ public:
 
     unsigned char *   getData()               { return m_pData; }
     int               getDataLen()            { return m_nWidth * m_nHeight; }
+	
+	//ccColor4B getColor4B(float x, float y);
+	//ccColor4F getColor4F(float x, float y);
+
+
+	ccColor4B getColor4B(float x, float y)
+	{
+		ccColor4B color = { 0, 0, 0, 0 };
+		int ix = (int)x - 1;
+		int iy = (int)y - 1;
+        unsigned char* pos = m_pData;
+        pos += (iy*getWidth() + ix) * 4;
+        color.r = *(pos++);
+        color.g = *(pos++);
+        color.b = *(pos++);
+        color.a = *(pos++);
+		return color;
+	};
+
+	ccColor4F getColor4F(float x, float y)
+	{
+		return ccc4FFromccc4B(getColor4B(x, y));
+	};
 
 
     bool hasAlpha()                     { return m_bHasAlpha;   }
@@ -177,15 +201,26 @@ public:
     CC_SYNTHESIZE_READONLY(int,     m_nBitsPerComponent,   BitsPerComponent);
 
 protected:
+#if CC_JPEG_ENABLED > 0
     bool _initWithJpgData(void *pData, int nDatalen);
+#endif
+
     bool _initWithPngData(void *pData, int nDatalen);
+
+#if CC_TIFF_ENABLED > 0
     bool _initWithTiffData(void *pData, int nDataLen);
+#endif
+
+#if CC_WEBP_ENABLED > 0
     bool _initWithWebpData(void *pData, int nDataLen);
+#endif
+
     // @warning kFmtRawData only support RGBA8888
     bool _initWithRawData(void *pData, int nDatalen, int nWidth, int nHeight, int nBitsPerComponent, bool bPreMulti);
 
     bool _saveImageToPNG(const char *pszFilePath, bool bIsToRGB = true);
-#ifndef QUICK_MINI_TARGET
+
+#if CC_JPEG_ENABLED > 0
     bool _saveImageToJPG(const char *pszFilePath);
 #endif
 

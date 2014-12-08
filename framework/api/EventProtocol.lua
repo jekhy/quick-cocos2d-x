@@ -2,13 +2,22 @@
 local EventProtocol = {}
 
 function EventProtocol.extend(object)
+    PRINT_DEPRECATED("module api.EventProtocol is deprecated, please use cc.components.behavior.EventProtocol")
+
     object.listeners_ = {}
     object.listenerHandleIndex_ = 0
 
-    function object:addEventListener(eventName, listener)
+    function object:addEventListener(eventName, listener, target)
         eventName = string.upper(eventName)
         if object.listeners_[eventName] == nil then
             object.listeners_[eventName] = {}
+        end
+
+        local ttarget = type(target)
+        if ttarget == "table" or ttarget == "userdata" then
+            PRINT_DEPRECATED("api.EventProtocol.addEventListener(eventName, listener, target) is deprecated, please use api.EventProtocol.addEventListener(eventName, handler(target, listener))")
+            listener = handler(target, listener)
+            tag = ""
         end
 
         object.listenerHandleIndex_ = object.listenerHandleIndex_ + 1

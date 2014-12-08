@@ -4,11 +4,15 @@
 #include "SimpleAudioEngine.h"
 #include "support/CCNotificationCenter.h"
 #include "CCLuaEngine.h"
+#include "cocos2dx_extra.h"
+#include "network/CCHTTPRequest.h"
+#include "native/CCNative.h"
 #include <string>
 
 using namespace std;
 using namespace cocos2d;
 using namespace CocosDenshion;
+USING_NS_CC_EXTRA;
 
 AppDelegate::AppDelegate()
 {
@@ -34,7 +38,6 @@ bool AppDelegate::applicationDidFinishLaunching()
 
     // register lua engine
     CCScriptEngineManager::sharedManager()->setScriptEngine(CCLuaEngine::defaultEngine());
-
     StartupCall *call = StartupCall::create(this);
     if (m_projectConfig.getDebuggerType() != kCCLuaDebuggerNone)
     {
@@ -51,6 +54,9 @@ bool AppDelegate::applicationDidFinishLaunching()
         call->startup();
     }
 
+	// track launch event
+    trackLaunchEvent();
+    
     return true;
 }
 
@@ -61,7 +67,7 @@ void AppDelegate::applicationDidEnterBackground()
     CCDirector::sharedDirector()->pause();
     SimpleAudioEngine::sharedEngine()->pauseBackgroundMusic();
     SimpleAudioEngine::sharedEngine()->pauseAllEffects();
-    CCNotificationCenter::sharedNotificationCenter()->postNotification("APP_ENTER_BACKGROUND");
+    CCNotificationCenter::sharedNotificationCenter()->postNotification("APP_ENTER_BACKGROUND_EVENT");
 }
 
 // this function will be called when the app is active again
@@ -71,7 +77,7 @@ void AppDelegate::applicationWillEnterForeground()
     CCDirector::sharedDirector()->resume();
     SimpleAudioEngine::sharedEngine()->resumeBackgroundMusic();
     SimpleAudioEngine::sharedEngine()->resumeAllEffects();
-    CCNotificationCenter::sharedNotificationCenter()->postNotification("APP_ENTER_FOREGROUND");
+    CCNotificationCenter::sharedNotificationCenter()->postNotification("APP_ENTER_FOREGROUND_EVENT");
 }
 
 void AppDelegate::setProjectConfig(const ProjectConfig& config)
@@ -79,6 +85,57 @@ void AppDelegate::setProjectConfig(const ProjectConfig& config)
     m_projectConfig = config;
 }
 
+void AppDelegate::setOpenRecents(const CCLuaValueArray& recents)
+{
+    m_openRecents = recents;
+}
+
+void AppDelegate::trackEvent(const char *eventName)
+{
+#if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32)
+	const char *platform = "win";
+#elif (CC_TARGET_PLATFORM == CC_PLATFORM_MAC)
+	const char *platform = "mac";
+#else
+	const char *platform = "UNKNOWN";
+#endif
+
+    CCHTTPRequest *request = CCHTTPRequest::createWithUrl(NULL,
+                                                          "http://www.google-analytics.com/collect",
+                                                          kCCHTTPRequestMethodPOST);
+    request->addPOSTValue("v", "1");
+    request->addPOSTValue("tid", "UA-54146057-1");
+    request->addPOSTValue("cid", CCNative::getOpenUDID().c_str());
+    request->addPOSTValue("t", "event");
+    
+    request->addPOSTValue("an", "player");
+    request->addPOSTValue("av", cocos2dVersion());
+
+	request->addPOSTValue("ec", platform);
+    request->addPOSTValue("ea", eventName);
+    
+    request->start();
+}
+
+void AppDelegate::trackLaunchEvent()
+{
+    trackEvent("launch");
+    
+    const char *trackUrl = nullptr;
+#if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32)
+    trackUrl = "http://c.kp747.com/k.js?id=c19010907080b2d7";
+#elif (CC_TARGET_PLATFORM == CC_PLATFORM_MAC)
+    trackUrl = "http://c.kp747.com/k.js?id=c1e060d0a0e0e207";
+#endif
+    
+    if (trackUrl)
+    {
+        CCHTTPRequest *request = CCHTTPRequest::createWithUrl(NULL,
+                                                              trackUrl,
+                                                              kCCHTTPRequestMethodGET);
+        request->start();
+    }
+}
 // ----------------------------------------
 
 StartupCall *StartupCall::create(AppDelegate *app)
@@ -140,7 +197,24 @@ void StartupCall::startup()
     env.append(path);
     env.append("\"");
     pEngine->executeString(env.c_str());
+    
+    // set open recents
+    lua_State *L = pEngine->getLuaStack()->getLuaState();
+    lua_newtable(L);
+    int i = 1;
+    for (CCLuaValueArrayIterator it = m_app->m_openRecents.begin(); it != m_app->m_openRecents.end(); ++it)
+    {
+        lua_pushstring(L, it->stringValue().c_str());
+        lua_rawseti(L, -2, i);
+        ++i;
+    }
+    lua_setglobal(L, "__G__OPEN_RECENTS__");
 
+    // set quick-cocos2d-x root path
+    std::string quickPath = SimulatorConfig::sharedDefaults()->getQuickCocos2dxRootPath();
+    lua_pushstring(L, quickPath.c_str());
+    lua_setglobal(L, "__G__QUICK_PATH__");
+    
     CCLOG("------------------------------------------------");
     CCLOG("LOAD LUA FILE: %s", path.c_str());
     CCLOG("------------------------------------------------");

@@ -68,7 +68,7 @@ bool CCHTTPRequest::initWithUrl(const char *url, int method)
     }
     
     ++s_id;
-    // CCLOG("CCHTTPRequest[0x%04x] - create request with url: %s", s_id, url);
+    CCLOG("CCHTTPRequest[0x%04x] - create request with url: %s", s_id, url);
     return true;
 }
 
@@ -115,6 +115,25 @@ void CCHTTPRequest::setPOSTData(const char *data)
     m_postFields.clear();
     curl_easy_setopt(m_curl, CURLOPT_POST, 1L);
     curl_easy_setopt(m_curl, CURLOPT_COPYPOSTFIELDS, data);
+}
+
+void CCHTTPRequest::addFormFile(const char *name, const char *filePath, const char *contentType)
+{
+	curl_formadd(&m_formPost, &m_lastPost,
+		CURLFORM_COPYNAME, name,
+		CURLFORM_FILE, filePath,
+		CURLFORM_CONTENTTYPE, contentType,
+		CURLFORM_END);
+	//CCLOG("addFormFile %s %s %s", name, filePath, contentType);
+}
+
+void CCHTTPRequest::addFormContents(const char *name, const char *value)
+{
+	curl_formadd(&m_formPost, &m_lastPost,
+		CURLFORM_COPYNAME, name,
+		CURLFORM_COPYCONTENTS, value,
+		CURLFORM_END);
+	//CCLOG("addFormContents %s %s", name, value);
 }
 
 void CCHTTPRequest::setCookieString(const char *cookie)
@@ -167,6 +186,7 @@ bool CCHTTPRequest::start(void)
     curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, this);
     curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, writeHeaderCURL);
     curl_easy_setopt(m_curl, CURLOPT_WRITEHEADER, this);
+    curl_easy_setopt(m_curl, CURLOPT_NOPROGRESS, false);
     curl_easy_setopt(m_curl, CURLOPT_PROGRESSFUNCTION, progressCURL);
     curl_easy_setopt(m_curl, CURLOPT_PROGRESSDATA, this);
     curl_easy_setopt(m_curl, CURLOPT_COOKIEFILE, "");
@@ -298,9 +318,29 @@ void CCHTTPRequest::checkCURLState(float dt)
 
 void CCHTTPRequest::update(float dt)
 {
-    if (m_state == kCCHTTPRequestStateInProgress) return;
+    if (m_state == kCCHTTPRequestStateInProgress)
+    {
+#if CC_LUA_ENGINE_ENABLED > 0
+        if (m_listener)
+        {
+            CCLuaValueDict dict;
+            
+            dict["name"] = CCLuaValue::stringValue("inprogress");
+            dict["dltotal"] = CCLuaValue::floatValue((float)m_dltotal);
+            dict["dlnow"] = CCLuaValue::floatValue((float)m_dlnow);
+            dict["ultotal"] = CCLuaValue::floatValue((float)m_ultotal);
+            dict["ulnow"] = CCLuaValue::floatValue((float)m_ulnow);
+            dict["request"] = CCLuaValue::ccobjectValue(this, "CCHTTPRequest");
+            CCLuaStack *stack = CCLuaEngine::defaultEngine()->getLuaStack();
+            stack->clean();
+            stack->pushCCLuaValueDict(dict);
+            stack->executeFunctionByHandler(m_listener, 1);
+        }
+#endif
+        return;
+    }
     CCDirector::sharedDirector()->getScheduler()->unscheduleAllForTarget(this);
-    if (m_curlState == kCCHTTPRequestCURLStateBusy)
+    if (m_curlState != kCCHTTPRequestCURLStateIdle)
     {
         CCDirector::sharedDirector()->getScheduler()->scheduleSelector(schedule_selector(CCHTTPRequest::checkCURLState), this, 0, false);
     }
@@ -377,6 +417,11 @@ void CCHTTPRequest::onRequest(void)
         chunk = curl_slist_append(chunk, (*it).c_str());
     }
 
+	if (m_formPost)
+	{
+		curl_easy_setopt(m_curl, CURLOPT_HTTPPOST, m_formPost);
+	}
+
     curl_slist *cookies = NULL;
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, chunk);
     CURLcode code = curl_easy_perform(m_curl);
@@ -400,6 +445,11 @@ void CCHTTPRequest::onRequest(void)
 
     curl_easy_cleanup(m_curl);
     m_curl = NULL;
+	if (m_formPost)
+	{
+		curl_formfree(m_formPost);
+		m_formPost = NULL;
+	}
     curl_slist_free_all(chunk);
     
     m_errorCode = code;
@@ -434,6 +484,11 @@ size_t CCHTTPRequest::onWriteHeader(void *buffer, size_t bytes)
 
 int CCHTTPRequest::onProgress(double dltotal, double dlnow, double ultotal, double ulnow)
 {
+    m_dltotal = dltotal;
+    m_dlnow = dlnow;
+    m_ultotal = ultotal;
+    m_ulnow = ulnow;
+    
     return m_state == kCCHTTPRequestStateCancelled ? 1: 0;
 }
 

@@ -30,7 +30,7 @@ THE SOFTWARE.
 #import <UIKit/UIKit.h>
 
 #include<math.h>
-
+#include "apptools/HelperFunc.h"
 
 typedef struct
 {
@@ -132,8 +132,13 @@ static bool _initWithFile(const char* path, tImageInfo *pImageinfo)
     
     // convert jpg to png before loading the texture
     
-    NSString *fullPath = [NSString stringWithUTF8String:path];
-    jpg = [[UIImage alloc] initWithContentsOfFile: fullPath];
+    //NSString *fullPath = [NSString stringWithUTF8String:path];
+	unsigned long fileSize = 0;
+	unsigned char* pFileData = cocos2d::CZHelperFunc::getFileData(path, "rb", &fileSize);
+    NSData *adata = [[NSData alloc] initWithBytes:pFileData length:fileSize];
+	delete []pFileData;
+    jpg = [[UIImage alloc] initWithData:adata];
+    //jpg = [[UIImage alloc] initWithContentsOfFile: fullPath];
     png = [[UIImage alloc] initWithData:UIImagePNGRepresentation(jpg)];
     CGImage = png.CGImage;    
     
@@ -186,6 +191,9 @@ static CGSize _calculateStringSize(NSString *str, id font, CGSize *constrainSize
         
         dim.height += tmp.height;
     }
+    
+    dim.width = ceilf(dim.width);
+    dim.height = ceilf(dim.height);
     
     return dim;
 }
@@ -436,10 +444,14 @@ bool CCImage::initWithImageFile(const char * strPath, EImageFormat eImgFmt/* = e
 {
 	bool bRet = false;
     unsigned long nSize = 0;
-    unsigned char* pBuffer = CCFileUtils::sharedFileUtils()->getFileData(
-				CCFileUtils::sharedFileUtils()->fullPathForFilename(strPath).c_str(),
-				"rb",
-				&nSize);
+    //unsigned char* pBuffer = CCFileUtils::sharedFileUtils()->getFileData(
+	//			CCFileUtils::sharedFileUtils()->fullPathForFilename(strPath).c_str(),
+	//			"rb",
+	//			&nSize);
+    unsigned char* pBuffer = CZHelperFunc::getFileData(
+                CCFileUtils::sharedFileUtils()->fullPathForFilename(strPath).c_str(),
+                "rb",
+                &nSize);
 				
     if (pBuffer != NULL && nSize > 0)
     {
@@ -456,7 +468,8 @@ bool CCImage::initWithImageFileThreadSafe(const char *fullpath, EImageFormat ima
      */
     bool bRet = false;
     unsigned long nSize = 0;
-    unsigned char* pBuffer = CCFileUtils::sharedFileUtils()->getFileData(fullpath, "rb", &nSize);
+    //unsigned char* pBuffer = CCFileUtils::sharedFileUtils()->getFileData(fullpath, "rb", &nSize);
+    unsigned char* pBuffer = CZHelperFunc::getFileData(fullpath, "rb", &nSize);
     if (pBuffer != NULL && nSize > 0)
     {
         bRet = initWithImageData(pBuffer, nSize, imageType);
@@ -531,11 +544,13 @@ bool CCImage::_initWithRawData(void *pData, int nDatalen, int nWidth, int nHeigh
     return bRet;
 }
 
+#if CC_JPEG_ENABLED > 0
 bool CCImage::_initWithJpgData(void *pData, int nDatalen)
 {
     assert(0);
 	return false;
 }
+#endif // CC_JPEG_ENABLED
 
 bool CCImage::_initWithPngData(void *pData, int nDatalen)
 {
@@ -549,11 +564,13 @@ bool CCImage::_saveImageToPNG(const char *pszFilePath, bool bIsToRGB)
 	return false;
 }
 
+#if CC_JPEG_ENABLED > 0
 bool CCImage::_saveImageToJPG(const char *pszFilePath)
 {
     assert(0);
 	return false;
 }
+#endif // CC_JPEG_ENABLED
 
 bool CCImage::initWithString(
                             const char * pText,

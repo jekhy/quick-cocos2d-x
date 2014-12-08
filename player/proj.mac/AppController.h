@@ -27,7 +27,7 @@
 #import "ConsoleWindowController.h"
 
 #include <string>
-#include "SimulatorConfig.h"
+#include "ProjectConfig/SimulatorConfig.h"
 #include "AppDelegate.h"
 
 class AppControllerBridge;
@@ -64,8 +64,8 @@ class AppControllerBridge;
 - (void) welcomeOpen;
 - (void) welcomeSamples;
 - (void) welcomeGetStarted;
-
-- (IBAction) onServicePreferences:(id)sender;
+- (void) welcomeCommunity;
+- (void) welcomeOpenRecent:(cocos2d::CCObject*)object;
 
 - (IBAction) onFileNewProject:(id)sender;
 - (IBAction) onFileNewPlayer:(id)sender;
@@ -76,7 +76,6 @@ class AppControllerBridge;
 
 - (IBAction) onPlayerWriteDebugLogToFile:(id)sender;
 - (IBAction) onPlayerOpenDebugLog:(id)sender;
-- (IBAction) onPlayerAutoConnectDebugger:(id)sender;
 - (IBAction) onPlayerRelaunch:(id)sender;
 - (IBAction) onPlayerShowProjectSandbox:(id)sender;
 - (IBAction) onPlayerShowProjectFiles:(id)sender;

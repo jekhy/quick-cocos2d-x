@@ -32,6 +32,7 @@ THE SOFTWARE.
 #include <sys/stat.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "apptools/HelperFunc.h"
 
 typedef struct
 {
@@ -271,8 +272,13 @@ static bool _initWithFile(const char* path, tImageInfo *pImageinfo)
     
     // convert jpg to png before loading the texture
     
-    NSString *fullPath = [NSString stringWithUTF8String:path];
-    jpg = [[NSImage alloc] initWithContentsOfFile: fullPath];
+    //NSString *fullPath = [NSString stringWithUTF8String:path];
+	unsigned long fileSize = 0;
+	unsigned char* pFileData = cocos2d::CZHelperFunc::getFileData(path, "rb", &fileSize);
+    NSData *adata = [[NSData alloc] initWithBytes:pFileData length:fileSize];
+	delete []pFileData;
+    jpg = [[NSImage alloc] initWithData:adata];
+    //jpg = [[NSImage alloc] initWithContentsOfFile: fullPath];
     //png = [[NSImage alloc] initWithData:UIImagePNGRepresentation(jpg)];
     CGImageSourceRef source = CGImageSourceCreateWithData((CFDataRef)[jpg TIFFRepresentation], NULL);
     CGImage = CGImageSourceCreateImageAtIndex(source, 0, NULL);
@@ -611,7 +617,8 @@ bool CCImage::initWithImageFile(const char * strPath, EImageFormat eImgFmt/* = e
 //	return initWithImageData(tempData.getBuffer(), tempData.getSize(), eImgFmt);
 
 	unsigned long fileSize = 0;
-	unsigned char* pFileData = CCFileUtils::sharedFileUtils()->getFileData(strTemp.c_str(), "rb", &fileSize);
+	//unsigned char* pFileData = CCFileUtils::sharedFileUtils()->getFileData(strTemp.c_str(), "rb", &fileSize);
+	unsigned char* pFileData = CZHelperFunc::getFileData(strTemp.c_str(), "rb", &fileSize);
 	bool ret = initWithImageData(pFileData, (int)fileSize, eImgFmt);
 	delete []pFileData;
 	return ret;
@@ -624,7 +631,8 @@ bool CCImage::initWithImageFileThreadSafe(const char *fullpath, EImageFormat ima
      */
     bool bRet = false;
     unsigned long nSize = 0;
-    unsigned char* pBuffer = CCFileUtils::sharedFileUtils()->getFileData(fullpath, "rb", &nSize);
+    //unsigned char* pBuffer = CCFileUtils::sharedFileUtils()->getFileData(fullpath, "rb", &nSize);
+    unsigned char* pBuffer = CZHelperFunc::getFileData(fullpath, "rb", &nSize);
     if (pBuffer != NULL && nSize > 0)
     {
         bRet = initWithImageData(pBuffer, (int)nSize, imageType);
@@ -916,10 +924,95 @@ bool CCImage::initWithString(
     return true;
 }
 
+void CGImageWriteToFile(CGImageRef image, NSString *path, const CFStringRef type) {
+    CFURLRef url = (CFURLRef)[NSURL fileURLWithPath:path];
+    CGImageDestinationRef destination = CGImageDestinationCreateWithURL(url, type, 1, NULL);
+    CGImageDestinationAddImage(destination, image, nil);
+    
+    if (!CGImageDestinationFinalize(destination)) {
+        NSLog(@"Failed to write image to %@", path);
+    }
+    
+    CFRelease(destination);
+}
+
 bool CCImage::saveToFile(const char *pszFilePath, bool bIsToRGB)
 {
-	assert(false);
-	return false;
+    bool saveToPNG = false;
+    bool needToCopyPixels = false;
+    std::string filePath(pszFilePath);
+    if (std::string::npos != filePath.find(".png"))
+    {
+        saveToPNG = true;
+    }
+
+    int bitsPerComponent = 8;
+    int bitsPerPixel = m_bHasAlpha ? 32 : 24;
+    if ((! saveToPNG) || bIsToRGB)
+    {
+        bitsPerPixel = 24;
+    }
+
+    int bytesPerRow    = (bitsPerPixel/8) * m_nWidth;
+    int myDataLength = bytesPerRow * m_nHeight;
+
+    unsigned char *pixels    = m_pData;
+
+    // The data has alpha channel, and want to save it with an RGB png file,
+    // or want to save as jpg,  remove the alpha channel.
+    if ((saveToPNG && m_bHasAlpha && bIsToRGB)
+       || (! saveToPNG))
+    {
+        pixels = new unsigned char[myDataLength];
+
+        for (int i = 0; i < m_nHeight; ++i)
+        {
+            for (int j = 0; j < m_nWidth; ++j)
+            {
+                pixels[(i * m_nWidth + j) * 3] = m_pData[(i * m_nWidth + j) * 4];
+                pixels[(i * m_nWidth + j) * 3 + 1] = m_pData[(i * m_nWidth + j) * 4 + 1];
+                pixels[(i * m_nWidth + j) * 3 + 2] = m_pData[(i * m_nWidth + j) * 4 + 2];
+            }
+        }
+
+        needToCopyPixels = true;
+    }
+
+    // make data provider with data.
+    CGBitmapInfo bitmapInfo = kCGBitmapByteOrderDefault;
+    if (saveToPNG && m_bHasAlpha && (! bIsToRGB))
+    {
+        bitmapInfo |= kCGImageAlphaPremultipliedLast;
+    }
+    CGDataProviderRef provider        = CGDataProviderCreateWithData(NULL, pixels, myDataLength, NULL);
+    CGColorSpaceRef colorSpaceRef    = CGColorSpaceCreateDeviceRGB();
+    CGImageRef iref                    = CGImageCreate(m_nWidth, m_nHeight,
+                                                        bitsPerComponent, bitsPerPixel, bytesPerRow,
+                                                        colorSpaceRef, bitmapInfo, provider,
+                                                        NULL, false,
+                                                        kCGRenderingIntentDefault);
+
+
+    if (saveToPNG)
+    {
+        CGImageWriteToFile(iref,[NSString stringWithUTF8String:pszFilePath], kUTTypePNG);
+    }
+    else
+    {
+        CGImageWriteToFile(iref,[NSString stringWithUTF8String:pszFilePath], kUTTypeJPEG);
+    }
+
+    CGImageRelease(iref);
+    CGColorSpaceRelease(colorSpaceRef);
+    CGDataProviderRelease(provider);
+    
+    
+    if (needToCopyPixels)
+    {
+        delete [] pixels;
+    }
+
+    return true;
 }
 
 

@@ -15,5 +15,6 @@
 - (IBAction) onSelectProjectLocation:(id)sender;
 - (IBAction) onCancel:(id)sender;
 - (IBAction) onCreate:(id)sender;
+- (IBAction) onPackageNameChanged:(id)sender;
 
 @end

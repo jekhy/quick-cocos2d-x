@@ -85,7 +85,7 @@ bool CCControlButton::initWithLabelAndBackgroundSprite(CCNode* node, CCScale9Spr
     {
         CCAssert(node != NULL, "Label must not be nil.");
         CCLabelProtocol* label = dynamic_cast<CCLabelProtocol*>(node);
-        CCAssert(backgroundSprite != NULL, "Background sprite must not be nil.");
+        CCAssert(backgroundSprite != NULL, "Background sprite must not be nil."); //background sprite can be nil
         CCAssert(label != NULL || backgroundSprite != NULL, "");
 
         m_bParentInited = true;
@@ -128,7 +128,9 @@ bool CCControlButton::initWithLabelAndBackgroundSprite(CCNode* node, CCScale9Spr
         setTitleForState(tempString, CCControlStateNormal);
         setTitleColorForState(node->getColor(), CCControlStateNormal);
         setTitleLabelForState(node, CCControlStateNormal);
-        setBackgroundSpriteForState(backgroundSprite, CCControlStateNormal);
+        if (NULL != backgroundSprite) { //background sprite can be nil
+            setBackgroundSpriteForState(backgroundSprite, CCControlStateNormal);
+        }
 
         setLabelAnchorPoint(ccp(0.5f, 0.5f));
 
@@ -626,7 +628,7 @@ void CCControlButton::needsLayout()
 
 
 
-int CCControlButton::ccTouchBegan(CCTouch *pTouch, CCEvent *pEvent)
+bool CCControlButton::ccTouchBegan(CCTouch *pTouch, CCEvent *pEvent)
 {
     if (!isTouchInside(pTouch) || !isEnabled() || !isVisible() || !hasVisibleParents() )
     {
@@ -647,7 +649,7 @@ int CCControlButton::ccTouchBegan(CCTouch *pTouch, CCEvent *pEvent)
     return true;
 }
 
-int CCControlButton::ccTouchMoved(CCTouch *pTouch, CCEvent *pEvent)
+void CCControlButton::ccTouchMoved(CCTouch *pTouch, CCEvent *pEvent)
 {
     if (!isEnabled() || !isPushed() || isSelected())
     {
@@ -655,7 +657,7 @@ int CCControlButton::ccTouchMoved(CCTouch *pTouch, CCEvent *pEvent)
         {
             setHighlighted(false);
         }
-        return kCCTouchMoved;
+        return;
     }
 
     bool isTouchMoveInside = isTouchInside(pTouch);
@@ -678,8 +680,6 @@ int CCControlButton::ccTouchMoved(CCTouch *pTouch, CCEvent *pEvent)
     {
         sendActionsForControlEvents(CCControlEventTouchDragOutside);
     }
-
-    return kCCTouchMoved;
 }
 
 void CCControlButton::ccTouchEnded(CCTouch *pTouch, CCEvent *pEvent)
